@@ -38,9 +38,10 @@ var deployCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		dest := cfg.Section("java").Key("ghall").String()
+
 		switch module {
 		case "ghall":
-			dest := cfg.Section("java").Key("ghall").String()
 			err := util.Backup(dest, "*.jar")
 			if err != nil {
 				fmt.Println(err)
@@ -124,6 +125,27 @@ var deployCmd = &cobra.Command{
 			}
 
 			err = util.Deploymodule(sourceFile, dest)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+
+		// 切换到目标目录，如果有 start.sh 脚本，进行修改并执行
+		err = os.Chdir(dest)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		if _, err = os.Stat("start.sh"); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		err = util.ModifyScripts(module, sourceFile)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			err = util.ExecuteShell()
 			if err != nil {
 				fmt.Println(err)
 			}

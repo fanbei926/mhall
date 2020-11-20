@@ -1,6 +1,8 @@
 package main
 
-import "mhall/cmd"
+import (
+	"mhall/cmd"
+)
 
 func main() {
 	cmd.Execute()
