@@ -2,16 +2,12 @@ package util
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 )
 
-func ExecuteShell() error {
-	if err := os.Remove("start.sh"); err != nil {
-		fmt.Println(err)
-	}
-	os.Rename("./start.sh.new", "./start.sh")
-	comm := exec.Command("bash", "-c", "start.sh")
+func ExecuteShell(scriptfile string) error {
+
+	comm := exec.Command("bash", "-c", scriptfile)
 	stdErr, _ := comm.StderrPipe()
 	if err := comm.Start(); err != nil {
 		return err

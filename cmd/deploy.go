@@ -27,127 +27,123 @@ var deployCmd = &cobra.Command{
 		sourceFile := args[0]
 		if _, err := os.Stat(sourceFile); err != nil {
 			if os.IsNotExist(err) {
-				fmt.Println("Can not find the source file.")
+				mye := util.New("deploy.go", 31, err.Error())
+				fmt.Println(mye.Error())
 				os.Exit(1)
 			}
 		}
 
 		cfg, err := ini.Load(conf)
 		if err != nil {
-			fmt.Println(err)
+			mye := util.New("deploy.go", 38, err.Error())
+			fmt.Println(mye.Error())
 			os.Exit(1)
 		}
 
-		dest := cfg.Section("java").Key("ghall").String()
-
+		// 根据不同的 module 进行相应的操作
 		switch module {
-		case "ghall":
-			err := util.Backup(dest, "*.jar")
-			if err != nil {
-				fmt.Println(err)
+		case "ghall", "basic", "hall", "dscrm":
+			// 获取配置
+			dest := cfg.Section("java").Key(module).String()
+			if dest == "" {
+				mye := util.New("deploy.go", 49, "Path is blank. Please check.")
+				fmt.Println(mye.Error())
+				os.Exit(1)
 			}
 
-			err = util.Deploymodule(sourceFile, dest)
-			if err != nil {
-				fmt.Println(err)
-			}
-		case "basic":
-			dest := cfg.Section("java").Key("basic").String()
-			err := util.Backup(dest, "*.jar")
-			if err != nil {
-				fmt.Println(err)
+			mye := util.Backup(dest, "*.jar")
+			if mye != nil {
+				fmt.Println(mye.Error())
+				os.Exit(1)
 			}
 
-			err = util.Deploymodule(sourceFile, dest)
-			if err != nil {
-				fmt.Println(err)
-			}
-		case "hall":
-			dest := cfg.Section("java").Key("hall").String()
-			err := util.Backup(dest, "*.jar")
-			if err != nil {
-				fmt.Println(err)
+			mye = util.Deploymodule(sourceFile, dest)
+			if mye != nil {
+				fmt.Println(mye.Error())
+				os.Exit(1)
 			}
 
-			err = util.Deploymodule(sourceFile, dest)
+			// 切换到目标目录，如果有 start.sh 脚本，进行修改并执行
+			err = os.Chdir(dest)
 			if err != nil {
-				fmt.Println(err)
+				mye := util.New("deploy.go", 69, err.Error())
+				fmt.Println(mye.Error())
+				os.Exit(1)
 			}
-		case "dscrm":
-			dest := cfg.Section("java").Key("dscrm").String()
-			err := util.Backup(dest, "*.jar")
-			if err != nil {
-				fmt.Println(err)
-			}
-
-			err = util.Deploymodule(sourceFile, dest)
-			if err != nil {
-				fmt.Println(err)
-			}
-		case "gh":
-			dest := cfg.Section("nginx").Key("gh").String()
-			err := util.Backup(dest, "gh")
-			if err != nil {
-				fmt.Println(err)
+			if _, err = os.Stat("start.sh"); err != nil {
+				mye := util.New("deploy.go", 74, err.Error())
+				fmt.Println(mye.Error())
+				os.Exit(1)
 			}
 
-			err = util.Deploymodule(sourceFile, path.Join(dest, module))
+			// 注释、更改jar包名称
+			err = util.ModifyScripts(module, sourceFile, 0)
 			if err != nil {
-				fmt.Println(err)
-			}
-		case "Ghall":
-			dest := cfg.Section("nginx").Key("Ghall").String()
-			err := util.Backup(dest, "Ghall")
-			if err != nil {
-				fmt.Println(err)
+				mye := util.New("deploy.go", 82, err.Error())
+				fmt.Println(mye.Error())
+				os.Exit(1)
 			}
 
-			err = util.Deploymodule(sourceFile, path.Join(dest, module))
+			err = util.ExecuteShell("stop.sh")
 			if err != nil {
-				fmt.Println(err)
+				mye := util.New("deploy.go", 89, err.Error())
+				fmt.Println(mye.Error())
+				os.Exit(1)
 			}
-		case "Video":
-			dest := cfg.Section("nginx").Key("Video").String()
-			err := util.Backup(dest, "Video")
+			err = util.ExecuteShell("start.sh")
 			if err != nil {
-				fmt.Println(err)
+				mye := util.New("deploy.go", 95, err.Error())
+				fmt.Println(mye.Error())
+				os.Exit(1)
 			}
-
-			err = util.Deploymodule(sourceFile, dest)
+			// 取消注释
+			err = util.ModifyScripts(module, sourceFile, 1)
 			if err != nil {
-				fmt.Println(err)
-			}
-		case "Video2":
-			dest := cfg.Section("nginx").Key("Video2").String()
-			err := util.Backup(dest, "Video2")
-			if err != nil {
-				fmt.Println(err)
+				mye := util.New("deploy.go", 101, err.Error())
+				fmt.Println(mye.Error())
+				os.Exit(1)
 			}
 
-			err = util.Deploymodule(sourceFile, dest)
-			if err != nil {
-				fmt.Println(err)
+		case "gh", "Ghall":
+			// 获取配置
+			dest := cfg.Section("nginx").Key(module).String()
+			if dest == "" {
+				mye := util.New("deploy.go", 111, "Path is blank. Please check.")
+				fmt.Println(mye.Error())
+				os.Exit(1)
 			}
-		}
 
-		// 切换到目标目录，如果有 start.sh 脚本，进行修改并执行
-		err = os.Chdir(dest)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		if _, err = os.Stat("start.sh"); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+			mye := util.Backup(dest, module)
+			if mye != nil {
+				fmt.Println(mye.Error())
+				os.Exit(1)
+			}
 
-		err = util.ModifyScripts(module, sourceFile)
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			err = util.ExecuteShell()
-			if err != nil {
-				fmt.Println(err)
+			mye = util.Deploymodule(sourceFile, path.Join(dest, module))
+			if mye != nil {
+				fmt.Println(mye.Error())
+				os.Exit(1)
+			}
+
+		case "Video", "Video2":
+			// 获取配置
+			dest := cfg.Section("nginx").Key(module).String()
+			if dest == "" {
+				mye := util.New("deploy.go", 132, "Path is blank. Please check.")
+				fmt.Println(mye.Error())
+				os.Exit(1)
+			}
+
+			mye := util.Backup(dest, module)
+			if mye != nil {
+				fmt.Println(mye.Error())
+				os.Exit(1)
+			}
+
+			mye = util.Deploymodule(sourceFile, dest)
+			if mye != nil {
+				fmt.Println(mye.Error())
+				os.Exit(1)
 			}
 		}
 
